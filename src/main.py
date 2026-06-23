@@ -133,8 +133,10 @@ async def orchestrate(req: Optional[OrchestrationRequest] = None, prompt: Option
         return StreamingResponse(invalid_plan_generator(), media_type="text/event-stream")
 
     # 3. Create execution queue (bounded for backpressure protection) and run executor task
+    from src.utils.budget_audit import BudgetTracker
+    req_budget = BudgetTracker(max_cost_cents=200)
     queue: asyncio.Queue[Any] = asyncio.Queue(maxsize=100)
-    task = asyncio.create_task(executor.execute(plan, queue, execution_id))
+    task = asyncio.create_task(executor.execute(plan, queue, execution_id, budget_tracker=req_budget))
     
     async def sse_event_generator() -> AsyncGenerator[str, None]:
         # Emit initial parsed and planned states

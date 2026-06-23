@@ -56,13 +56,16 @@ class DAGExecutor:
         self.budget_tracker = budget_tracker or BudgetTracker()
         self.receipts: Dict[str, AuditReceipt] = {}
 
-    async def execute(self, plan: ExecutionPlan, queue: asyncio.Queue[Any], execution_id: str) -> Dict[str, Any]:
+    async def execute(self, plan: ExecutionPlan, queue: asyncio.Queue[Any], execution_id: str, budget_tracker: Optional[BudgetTracker] = None) -> Dict[str, Any]:
         """
         Executes the plan topologically, running independent steps in parallel.
         Pushes OutputChunk updates to the streaming queue.
         """
         metrics = MetricsTracker()
         steps = plan.steps
+        
+        # Use request-scoped budget tracker if provided to prevent crosstalk/exhaustion between requests
+        active_budget = budget_tracker or self.budget_tracker
         
         logger.info("Starting DAG execution", execution_id=execution_id, total_steps=len(steps))
         
@@ -109,7 +112,7 @@ class DAGExecutor:
             try:
                 # Run the step with fault tolerance (retry/fallback/degrade)
                 output = await self._execute_step_with_fault_tolerance(
-                    step_id, step, plan, queue, execution_id, inputs_resolved, metrics
+                    step_id, step, plan, queue, execution_id, inputs_resolved, metrics, budget_tracker=active_budget
                 )
                 
                 async with state_lock:
@@ -204,7 +207,8 @@ class DAGExecutor:
         execution_id: str,
         resolved_inputs: Dict[str, Any],
         metrics: MetricsTracker,
-        agent_override: Optional[str] = None
+        agent_override: Optional[str] = None,
+        budget_tracker: Optional[BudgetTracker] = None
     ) -> Dict[str, Any]:
         """
         Runs a single node with all the fallback & retry safety net logic.
@@ -213,13 +217,16 @@ class DAGExecutor:
         agent_type = agent_override or step.agent_type
         attempt = 1
         
+        # Use request-scoped budget tracker if provided
+        active_budget = budget_tracker or self.budget_tracker
+        
         while True:
             # 1. Circuit Breaker Check
             try:
                 self.circuit_breaker.check(agent_type)
             except CircuitBreakerOpenException as cbe:
                 # Handle CB open by querying strategy immediately
-                strategy, fallback_agent = self.failure_handler.determine_strategy(step, cbe, attempt, current_agent=agent_type)
+                strategy, fallback_agent = self.failure_handler.determine_strategy(step, cbe, attempt - 1, current_agent=agent_type)
                 if strategy == "fallback" and fallback_agent:
                     await queue.put(OutputChunk(
                         step_id=step_id,
@@ -259,7 +266,7 @@ class DAGExecutor:
                 "writer": 15
             }
             cost = cost_map.get(agent_type, 2)
-            await self.budget_tracker.charge(cost, f"Execute step {step_id}")
+            await active_budget.charge(cost, f"Execute step {step_id}")
 
             metrics.start_step(step_id)
             await queue.put(OutputChunk(
@@ -310,7 +317,7 @@ class DAGExecutor:
                 metrics.record_error(step_id, str(e))
                 
                 # Determine strategy from failure handler
-                strategy, fallback_agent = self.failure_handler.determine_strategy(step, e, attempt, current_agent=agent_type)
+                strategy, fallback_agent = self.failure_handler.determine_strategy(step, e, attempt - 1, current_agent=agent_type)
                 
                 if strategy == "retry":
                     metrics.record_retry(step_id)
