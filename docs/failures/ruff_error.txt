@@ -1,0 +1,10 @@
+tests/test_disconnect.py:3:21: F401 [*] `fastapi.Request` imported but unused
+tests/test_disconnect.py:38:5: F841 Local variable `files` is assigned to but never used
+  |
+36 |     # The last saved execution state file should exist in the state directory
+37 |     # and have its running steps transitioned to failed/cancelled.
+38 |     files = state_manager.load_state
+   |     ^^^^^
+  |
+Found 2 errors.
+[*] 1 fixable with the `--fix` option.

@@ -1,0 +1,20 @@
+2026-06-23T14:10:05.123Z [info] Running Scenario A: Happy Path
+...
+2026-06-23T14:10:08.541Z [info] Client disconnected.
+
+Task exception was never retrieved
+future: <Task finished name='Task-18' coro=<DAGExecutor.execute() done, defined at src/executor.py:59> exception=CancelledError()>
+Traceback (most recent call last):
+  File "src/main.py", line 147, in sse_event_generator
+    chunk = await asyncio.wait_for(queue.get(), timeout=0.1)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.4/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py", line 512, in wait_for
+    return await fut
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "src/main.py", line 211, in sse_event_generator
+    # Connection closed, but we forgot to cancel background task!
+    pass
+RuntimeError: DAGExecutor task was left running after client disconnected. Task leak!

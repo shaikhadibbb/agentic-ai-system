@@ -1,0 +1,7 @@
+src/utils/batcher.py:40: error: Cannot determine type of "_loop"  [has-type]
+    if not hasattr(self, "_loop") or self._loop != current_loop:
+                                     ^
+src/agents/retriever.py:28: error: Cannot determine type of "_loop"  [has-type]
+    if not hasattr(self, "_loop") or self._loop != current_loop:
+                                     ^
+Found 2 errors in 2 files (checked 18 source files)

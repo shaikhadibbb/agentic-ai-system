@@ -1,0 +1,40 @@
+============================= test session starts ==============================
+collected 28 items
+
+tests/test_circuit_fallback.py F                                         [  3%]
+tests/test_executor.py ....                                              [ 17%]
+...
+
+=================================== FAILURES ===================================
+_________________________ test_circuit_breaker_fallback ________________________
+
+    async def test_circuit_breaker_fallback():
+        # ...
+        # GIVEN retriever circuit is OPEN
+        # WHEN running the DAG executor
+        # EXPECT it to swap to fallback_retriever
+>       res = await executor.execute(plan, queue, "test-cb-fallback")
+
+tests/test_circuit_fallback.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/executor.py:156: in execute
+    raise error
+src/executor.py:112: in run_node
+    output = await self._execute_step_with_fault_tolerance(...)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def _execute_step_with_fault_tolerance(...):
+        # ...
+        try:
+            self.circuit_breaker.check(agent_type)
+        except CircuitBreakerOpenException as cbe:
+            # BUG: when circuit is OPEN, determine_strategy returned "retry" because 
+            # retries_taken (1) < max_retries (2). Executor gets "retry", sleeps, then 
+            # re-runs with the same broken agent_type, causing a crash.
+>           raise cbe
+E           CircuitBreakerOpenException: Circuit breaker is OPEN for agent type: retriever
+
+src/executor.py:235: CircuitBreakerOpenException
+=========================== short test summary info ============================
+FAILED tests/test_circuit_fallback.py::test_circuit_breaker_fallback - CircuitBreakerOpenException
+========================= 1 failed, 27 passed in 1.45s =========================
