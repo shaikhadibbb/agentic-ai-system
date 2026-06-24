@@ -1,4 +1,4 @@
-# Multi-Agent Thingy 🧠
+# Multi-Agent Thingy
 
 > built in a week with too much coffee. orchestrator? i just call it "the thing."
 
@@ -12,7 +12,7 @@ bugs. but it works and i learned a ton.
 
 ---
 
-## 🛠️ Features I actually got working
+## Features I actually got working
 
 - **Manual DAG Executor**: Kahn's algorithm topological sorter that schedules task execution using `asyncio.create_task` and `asyncio.gather`.
 - **First-Principles Batcher**: Groups concurrent database/retrieval queries. If one query fails in the batch, the rest keep executing instead of crashing the whole batch.
@@ -23,7 +23,7 @@ bugs. but it works and i learned a ton.
 
 ---
 
-## 🚀 Quick Start (Get it running in 2 mins)
+## Quick Start (Get it running in 2 mins)
 
 ### Step 1: Set up the environment
 ```bash
@@ -50,7 +50,7 @@ PYTHONPATH=. ./venv/bin/python scripts/demo.py
 
 ---
 
-## 🧪 Running Tests
+## Running Tests
 We have a full test suite with 30 unit/integration tests achieving **91% statement coverage**:
 ```bash
 PYTHONPATH=. ./venv/bin/pytest --cov=src --cov-branch --cov-report=term-missing tests/
@@ -58,7 +58,7 @@ PYTHONPATH=. ./venv/bin/pytest --cov=src --cov-branch --cov-report=term-missing 
 
 ---
 
-## 🐳 Docker Build
+## Docker Build
 If you prefer running inside Docker:
 ```bash
 docker build -t multi-agent-orchestrator .
@@ -67,7 +67,7 @@ docker run -p 8000:8000 multi-agent-orchestrator
 
 ---
 
-## ⚠️ Known Issues & Bugs (that I know of)
+## Known Issues & Bugs (that I know of)
 
 - **Wildcard CORS**: CORS is set to wildcard `"*"` in main.py because I was having issues getting env variables loaded inside the docker container on my local machine. Will fix this later.
 - **Ctrl+C Hangs**: If you Ctrl+C the demo script, it sometimes hangs for a second while the batcher flusher background tasks are cancelled. Just kill it using `kill -9` if it gets annoying.
