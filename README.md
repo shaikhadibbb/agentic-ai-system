@@ -1,12 +1,12 @@
-# Multi-Agent Orchestrator (from scratch!)
+# Multi-Agent Orchestration System
 
-Hey! This is my project for building a multi-agent orchestration system entirely from scratch in Python 3.11+. I didn't use any black-box frameworks like LangChain, CrewAI, or networkx because I wanted to learn how concurrency, rate limiting, and DAG executors actually work under the hood.
+This project is a multi-agent orchestration system built from scratch in Python 3.11+. It is designed to demonstrate key system programming patterns such as concurrency control, manual DAG execution, rate limiting/batching, circuit breaking, and backpressure protection without relying on third-party frameworks like LangChain or CrewAI.
 
 ---
 
-## What this thing actually does
+## Architecture
 
-The core of the system is a manual DAG execution engine. It validates step relationships using Kahn's algorithm (to catch cycle loops before they run) and schedules tasks in parallel when their dependencies are met.
+The system uses a custom Directed Acyclic Graph (DAG) execution engine that validates dependencies using Kahn's algorithm and schedules concurrent task execution when prerequisites are met.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -26,19 +26,19 @@ The core of the system is a manual DAG execution engine. It validates step relat
 
 ---
 
-## 🛠️ Features I implemented
+## Core Features
 
-- **Manual DAG Executor**: Kahn's algorithm topological sorter that schedules task execution using `asyncio.create_task` and `asyncio.gather`.
-- **First-Principles Batcher**: Groups concurrent database/retrieval queries. If one query fails in the batch, the rest keep executing instead of crashing the whole batch.
-- **Circuit Breakers & Fallbacks**: Manual circuit breakers trip after 3 failures. Swaps execution to a fallback agent automatically if the primary circuit is open.
-- **Backpressure Protection**: Bounded queue limits (`maxsize=100`) prevent the server from running out of memory if the client is slow to read the stream.
-- **SSE Connection Management**: Cancels the background task automatically if the client disconnects, preventing orphaned LLM runs.
+- **DAG Execution Engine**: Uses Kahn's algorithm for topological sorting and schedules tasks concurrently using `asyncio`.
+- **Query Batcher**: Groups concurrent retrieval queries. If one query fails, the rest in the batch continue executing.
+- **Circuit Breakers & Fallbacks**: Automatically trips after 3 consecutive failures, routes requests to a fallback agent, and attempts recovery after a timeout.
+- **Backpressure Protection**: Bounded queue limits (`maxsize=100`) to manage memory usage under high load.
+- **SSE Connection Management**: Automatically cancels background execution if the client disconnects.
 
 ---
 
-## 🚀 Quick Start (Get it running in 2 mins)
+## Quick Start
 
-### Step 1: Set up the environment
+### 1. Environment Setup
 ```bash
 git clone <repository_url> multi-agent-orchestrator
 cd multi-agent-orchestrator
@@ -47,31 +47,31 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Step 2: Run the API Server
+### 2. Start the API Server
 Start the local FastAPI server:
 ```bash
 PYTHONPATH=. ./venv/bin/python -m uvicorn src.main:app --reload --port 8000
 ```
-This runs the local server serving the streaming SSE API at `/api/orchestrate`.
+The server exposes a streaming Server-Sent Events (SSE) API at `/api/orchestrate`.
 
-### Step 3: Run the CLI Demo
-This runs 3 scenarios: Scenario A (happy path), Scenario B (failure and degraded fallback recovery), and Scenario C (parallel climate policies analysis).
+### 3. Run the CLI Demo
+To run the pre-configured scenarios (happy path, fallback recovery, and parallel analysis):
 ```bash
 PYTHONPATH=. ./venv/bin/python scripts/demo.py
 ```
 
 ---
 
-## 🧪 Running Tests
-We have a full test suite with 30 unit/integration tests achieving **91% statement coverage**:
+## Running Tests
+Run the test suite using pytest to verify system functionality and coverage:
 ```bash
 PYTHONPATH=. ./venv/bin/pytest --cov=src --cov-branch --cov-report=term-missing tests/
 ```
 
 ---
 
-## 🐳 Docker Build
-If you prefer running inside Docker:
+## Docker Build
+To build and run the application inside a Docker container:
 ```bash
 docker build -t multi-agent-orchestrator .
 docker run -p 8000:8000 multi-agent-orchestrator
@@ -79,10 +79,8 @@ docker run -p 8000:8000 multi-agent-orchestrator
 
 ---
 
-## ⚠️ Known Issues & Bugs (that I know of)
+## Known Issues
 
-- **Wildcard CORS**: CORS is set to wildcard `"*"` in main.py because I was having issues getting env variables loaded inside the docker container on my local machine. Will fix this later.
-- **Ctrl+C Hangs**: If you Ctrl+C the demo script, it sometimes hangs for a second while the batcher flusher background tasks are cancelled. Just kill it using `kill -9` if it gets annoying.
-- **No Persistence**: Everything is in-memory. If Uvicorn restarts, active execution states are gone.
-
-*Built with a lot of coffee.*
+- **Wildcard CORS**: CORS is configured with wildcards (`"*"`) for local development convenience.
+- **Demo Script Interrupts**: Terminating the CLI demo with Ctrl+C may experience a delay while background batcher tasks finish.
+- **State Persistence**: Active execution state is stored in-memory and will reset if the server restarts.
