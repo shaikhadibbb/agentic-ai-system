@@ -33,7 +33,6 @@ The core of the system is a manual DAG execution engine. It validates step relat
 - **Circuit Breakers & Fallbacks**: Manual circuit breakers trip after 3 failures. Swaps execution to a fallback agent automatically if the primary circuit is open.
 - **Backpressure Protection**: Bounded queue limits (`maxsize=100`) prevent the server from running out of memory if the client is slow to read the stream.
 - **SSE Connection Management**: Cancels the background task automatically if the client disconnects, preventing orphaned LLM runs.
-- **Interactive Sandbox Dashboard**: A dark-mode, glassmorphic UI served directly at the root URL `/` to let you inject failures and visualize DAG execution in real-time.
 
 ---
 
@@ -48,13 +47,12 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Step 2: Run the Real-Time Sandbox Dashboard (Highly Recommended!)
-Start the local server:
+### Step 2: Run the API Server
+Start the local FastAPI server:
 ```bash
 PYTHONPATH=. ./venv/bin/python -m uvicorn src.main:app --reload --port 8000
 ```
-Then open your browser to [http://localhost:8000/](http://localhost:8000/).
-Tbh, this is the coolest part of the project. You can type prompts, watch the DAG nodes execute live, click "Inject Retriever Failure" to trip the circuit breaker, and see the system self-heal via fallback agents in real-time.
+This runs the local server serving the streaming SSE API at `/api/orchestrate`.
 
 ### Step 3: Run the CLI Demo
 This runs 3 scenarios: Scenario A (happy path), Scenario B (failure and degraded fallback recovery), and Scenario C (parallel climate policies analysis).

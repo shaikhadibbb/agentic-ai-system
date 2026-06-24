@@ -225,31 +225,3 @@ async def orchestrate(req: Optional[OrchestrationRequest] = None, prompt: Option
             
     return StreamingResponse(sse_event_generator(), media_type="text/event-stream")
 
-@app.get("/", response_class=HTMLResponse)
-async def get_dashboard() -> HTMLResponse:
-    """Serves the real-time glassmorphism sandbox dashboard."""
-    dashboard_path = os.path.join(os.path.dirname(__file__), "../dashboard/index.html")
-    if os.path.exists(dashboard_path):
-        with open(dashboard_path, "r") as f:
-            html_content = f.read()
-        return HTMLResponse(content=html_content)
-    return HTMLResponse(content="<h1>Dashboard file not found.</h1>", status_code=404)
-
-class InjectFailureRequest(BaseModel):
-    enabled: bool
-
-@app.post("/api/inject_failure")
-async def inject_failure(req: InjectFailureRequest) -> Dict[str, Any]:
-    """Toggles simulated connection timeout failures on retriever_primary."""
-    retriever_primary.simulate_failure = req.enabled
-    logger.warn("Simulated failure state changed", enabled=req.enabled)
-    return {"status": "success", "simulate_failure": retriever_primary.simulate_failure}
-
-@app.get("/api/system_status")
-async def system_status() -> Dict[str, Any]:
-    """Retrieves current circuit breaker state and failure injection state for dashboard status widgets."""
-    return {
-        "retriever_cb_state": circuit_breaker.get_state("retriever"),
-        "retriever_cb_failures": circuit_breaker.failures.get("retriever", 0),
-        "simulate_failure": getattr(retriever_primary, "simulate_failure", False)
-    }
